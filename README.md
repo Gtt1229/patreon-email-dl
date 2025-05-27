@@ -39,7 +39,7 @@ Fields:
 
 ## 3. Create and populate the appropriate fields in the patreon_email_dl.secret file
 
-### See an example patreon_email_dl.secret file [here](patreon_email_dl_secret.example)
+### See an example patreon_email_dl.secret file [here](patreon_email_dl.secret.example)
 
 Fields:
 | Variable | Value |
