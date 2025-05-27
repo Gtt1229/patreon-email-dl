@@ -16,6 +16,7 @@ services:
       - ./firefox_config:/app/cookies
     secrets:
       - patreon_email_dl_secrets
+
   firefox_patreon_email_dl:
     image: jlesage/firefox
     container_name: firefox_patreon_email_dl

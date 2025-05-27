@@ -2,6 +2,7 @@
 .env
 patreon_email_dl.secret
 
+.vs/
 # Bytecode and Python metadata
 __pycache__/
 *.pyc
