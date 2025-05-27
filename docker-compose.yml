@@ -6,14 +6,15 @@ services:
     environment:
       IMAP_SERVER: imap.gmail.com
       SUBJECT_KEYWORDS: ${SUBJECT_KEYWORDS}
-      OUTPUT_FOLDER: ${OUTPUT_FOLDER}
       CRON_SCHEDULE: ${CRON_SCHEDULE}
+      AUTO_MAKE_FOLDERS: ${AUTO_MAKE_FOLDERS}
       FIREFOX_CONTAINER_COOKIES: "true"
     volumes:
       - ./state:/app/state
       - ./logs:/app/logs
       - ./cookies.txt:/app/cookies.txt
       - ./firefox_config:/app/cookies
+      - ./${OUTPUT_FOLDER}:/downloads
     secrets:
       - patreon_email_dl_secrets
 

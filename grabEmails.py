@@ -8,7 +8,9 @@ from datetime import datetime
 from http.cookiejar import Cookie
 import shutil
 import tempfile
-
+import fcntl
+import errno
+import sys
 
 # --- Logging setup ---
 log_file = os.environ.get("LOG_FILE")
@@ -16,7 +18,9 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler(log_file) if log_file else logging.StreamHandler()
+        # Always include stdout logging, doesn't work for some reason
+        logging.StreamHandler(),
+        *([] if not log_file else [logging.FileHandler(log_file)])
     ]
 )
 log = logging.info
@@ -43,7 +47,8 @@ def get_config():
         "imap_server": os.environ.get("IMAP_SERVER", "imap.gmail.com"),
         "sender_filter": secrets.get("SENDER_FILTER", ""),
         "subject_keywords": [s.strip().lower() for s in os.environ.get("SUBJECT_KEYWORDS", "").split(",") if s.strip()],
-        "output_folder": os.environ.get("OUTPUT_FOLDER", "/downloads")
+        "output_folder":"/downloads",
+        "auto_make_folders": os.environ.get("AUTO_MAKE_FOLDERS", "false").lower() == "true"
     }
 
 def load_downloaded():
@@ -98,6 +103,27 @@ def label_as_done(mail, email_id):
     except Exception as e:
         log(f"Failed to label email as done: {e}")
 
+def extract_sender_name(from_header):
+    """Extract sender name from a From email header"""
+    if not from_header:
+        return "Unknown"
+    
+    # Try to match sender name
+    match = re.search(r'^(.*?)\s*<', from_header)
+    if match:
+        name = match.group(1).strip()
+        if name:
+            return name
+    
+    # If no name found use email
+    email_part = re.search(r'<?([\w\.-]+)@', from_header)
+    if email_part:
+        return email_part.group(1)
+    
+    # fall way back to "Unknown"
+    return "Unknown"
+
+
 def extract_valid_links(body):
     links = re.findall(r'https?://[^\s<>"]+', body)
     return [
@@ -142,7 +168,9 @@ def extract_firefox_cookies(sqlite_path="/app/cookies/profile/cookies.sqlite", o
     return True
 
 
+
 def get_filtered_emails(config):
+    downloaded = load_downloaded()
     mail = imaplib.IMAP4_SSL(config["imap_server"])
     mail.login(config["email"], config["app_password"])
     mail.select("inbox")
@@ -161,7 +189,15 @@ def get_filtered_emails(config):
         raw_email = msg_data[0][1]
         msg = email.message_from_bytes(raw_email)
         subject = msg.get("Subject", "")
-        log(f"Matching Email: {subject}")
+        
+        # Extract sender name when AUTO_MAKE_FOLDERS is enabled
+        sender_name = None
+        if config["auto_make_folders"]:
+            from_header = msg.get("From", "")
+            sender_name = extract_sender_name(from_header)
+            log(f"Matching Email: {subject} from {sender_name}")
+        else:
+            log(f"Matching Email: {subject}")
 
         if config["subject_keywords"] and not any(k in subject.lower() for k in config["subject_keywords"]):
             continue
@@ -174,17 +210,28 @@ def get_filtered_emails(config):
         else:
             body += msg.get_payload(decode=True).decode(errors="ignore")
 
-        process_email_body(body, mail, e_id, config)
+        process_email_body(body, mail, e_id, config, downloaded, sender_name)
 
     mail.logout()
 
-def process_email_body(body, mail, email_id, config):
-    downloaded = load_downloaded()
+def process_email_body(body, mail, email_id, config, downloaded, sender_name=None):
     links = extract_valid_links(body)
-
-    os.makedirs(config["output_folder"], exist_ok=True)
-    output_template = os.path.join(config["output_folder"], "%(title)s.%(ext)s")
+    # Remove duplicates within this email
+    links = list(set(links))
+    
+    # Set up output folder and subfolder
+    output_folder = config["output_folder"]
+    if sender_name and config["auto_make_folders"]:
+        # Clean up sender name for subfolder
+        safe_name = re.sub(r'[\\/*?:"<>|]', "_", sender_name)
+        output_folder = os.path.join(output_folder, safe_name)
+        log(f"Using subfolder for sender: {safe_name}")
+        
+    os.makedirs(output_folder, exist_ok=True)
+    output_template = os.path.join(output_folder, "%(title)s.%(ext)s")
+    
     successful = False
+    newly_downloaded = []
 
     for link in links:
         if link in downloaded:
@@ -204,7 +251,7 @@ def process_email_body(body, mail, email_id, config):
                 log("Failed to extract Firefox cookies. Skipping download.")
                 continue
         
-        result = subprocess.run([
+        ytdlp_cmd = [
             "yt-dlp",
             "--cookies", cookie_file,
             "--restrict-filenames",
@@ -212,12 +259,13 @@ def process_email_body(body, mail, email_id, config):
             "--print", "after_move:filepath",
             "-o", output_template,
             link
-        ], capture_output=True, text=True, encoding='utf-8')
+        ]
         
-
-        filename = result.stdout.strip()
-        if result.returncode != 0:
-            log(f"yt-dlp failed with return code {result.returncode}")
+        # Use the streaming function instead of subprocess.run to maybe get better logs
+        returncode, filename, output = stream_process_output(ytdlp_cmd)
+        
+        if returncode != 0:
+            log(f"yt-dlp failed with return code {returncode}")
             continue
 
         if not filename or not os.path.exists(filename):
@@ -230,13 +278,17 @@ def process_email_body(body, mail, email_id, config):
 
         # Get intended title from filename
         basename = os.path.basename(filename)
-        title = os.path.splitext(basename)[0]       
+        title = os.path.splitext(basename)[0]      
 
         # Check if metadata title already matches
         existing_title = get_ffmpeg_metadata_title(filename)
         if existing_title == title:
             log(f"Skipping ffmpeg, title already set: '{title}'")
-            save_downloaded(link, filename)
+            # Add to curreunt list
+            newly_downloaded.append((link, filename))
+            # Update download.txt set
+            downloaded.add(link)
+            successful = True
             continue        
 
         # Apply new metadata
@@ -259,15 +311,85 @@ def process_email_body(body, mail, email_id, config):
             if os.path.exists(temp_output):
                 os.remove(temp_output)
 
-        save_downloaded(link, filename)
+        # Just add to current list
+        newly_downloaded.append((link, filename))
+        # Update memory to prevent same session dupes
+        downloaded.add(link)
         successful = True
-
+    
+    # Save all at the end
+    if newly_downloaded:
+        save_downloaded_batch(newly_downloaded)
+        
     if successful:
         label_as_done(mail, email_id)
 
+def save_downloaded_batch(items):
+    with open("/app/state/downloaded.txt", "a", encoding="utf-8") as f:
+        for link, filename in items:
+            if filename:
+                f.write(f"{link} --> {filename}\n")
+            else:
+                f.write(f"{link}\n")
+
+def stream_process_output(cmd):
+    """Run a command and stream its output in real time"""
+    print(f"Running command: {' '.join(cmd)}", flush=True)  # Trying to direct to container logs
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,  # Combine stdout and stderr to try to capture all logs
+        text=True,
+        encoding='utf-8',
+        bufsize=1,  # Line buffering
+        universal_newlines=True
+    )
+    
+    output_lines = []
+    filepath = None
+    
+    # Process output in real time
+    for line in process.stdout:
+        line = line.strip()
+        output_lines.append(line)
+        # Maybe irect print to container logs and log to the logger
+        print(f"yt-dlp: {line}", flush=True)
+        log(f"yt-dlp: {line}")
+        
+        if line and not line.startswith("["):
+            filepath = line
+    
+    # Wait for process to complete
+    return_code = process.wait()
+    return return_code, filepath, "\n".join(output_lines)
+
 def main():
     config = get_config()
-    get_filtered_emails(config)
+    
+    # Create lock file to prevent concurrent runs
+    lock_file = "/app/state/patreon_dl.lock"
+    os.makedirs(os.path.dirname(lock_file), exist_ok=True)
+    
+    try:
+        # Try to acquire a hard lock
+        lock_handle = open(lock_file, 'w')
+        fcntl.flock(lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        
+        log("Lock acquired, starting email processing...")
+        get_filtered_emails(config)
+        
+    except IOError as e:
+        if e.errno == errno.EWOULDBLOCK:
+            log("Another instance is already running. Exiting.")
+            sys.exit(0)
+        raise
+    except Exception as e:
+        log(f"Error during execution: {e}")
+    finally:
+        # Release the lock when done
+        if 'lock_handle' in locals():
+            fcntl.flock(lock_handle, fcntl.LOCK_UN)
+            lock_handle.close()
 
 if __name__ == "__main__":
     main()

@@ -2,16 +2,17 @@
 set -e
 
 CRON_SCHEDULE="${CRON_SCHEDULE:-"@hourly"}"
-LOG_FILE="${LOG_FILE:-/app/logs/patreon-dl.log}"
+export LOG_FILE="${LOG_FILE:-/app/logs/patreon-dl.log}"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 
 # run at start
 echo "Running job at start..."
-python /app/grabEmails.py >> "$LOG_FILE" 2>&1
+python -u /app/grabEmails.py
+
 
 # supercronic
-echo "$CRON_SCHEDULE bash -c 'python /app/grabEmails.py >> \"$LOG_FILE\" 2>&1'" > /app/crontab.txt
+echo "$CRON_SCHEDULE bash -c 'python -u /app/grabEmails.py'" > /app/crontab.txt
 
 echo "Using schedule: $CRON_SCHEDULE"
 echo "Logging to: $LOG_FILE"
