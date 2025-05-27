@@ -1,0 +1,20 @@
+# Ignore sensitive environment and tracking files
+.env
+patreon_email_dl.secret
+
+# Bytecode and Python metadata
+__pycache__/
+*.pyc
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Docker stuff
+*.sqlite
+cookies/
+downloads/
+logs/
+firefox_config/
+cookies.txt
+state/

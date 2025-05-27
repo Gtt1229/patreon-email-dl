@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  patreon_email_dl:
+    build: .
+    container_name: patreon_email_dl
+    environment:
+      IMAP_SERVER: imap.gmail.com
+      SUBJECT_KEYWORDS: ${SUBJECT_KEYWORDS}
+      OUTPUT_FOLDER: ${OUTPUT_FOLDER}
+      CRON_SCHEDULE: ${CRON_SCHEDULE}
+      FIREFOX_CONTAINER_COOKIES: "true"
+    volumes:
+      - ./state:/app/state
+      - ./logs:/app/logs
+      - ./cookies.txt:/app/cookies.txt
+      - ./firefox_config:/app/cookies
+    secrets:
+      - patreon_email_dl_secrets
+  firefox_patreon_email_dl:
+    image: jlesage/firefox
+    container_name: firefox_patreon_email_dl
+    ports:
+      - "8280:5800"  # Access at http://localhost:8280
+    volumes:
+      - ./firefox_config:/config
+    environment:
+      - TZ=America/New_York
+    #restart: unless-stopped
+
+secrets:
+  patreon_email_dl_secrets:
+    file: ./patreon_email_dl.secret

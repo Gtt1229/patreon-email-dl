@@ -1,0 +1,9 @@
+# Keep shell scripts LF
+*.sh text eol=lf
+Dockerfile text eol=lf
+
+# Optional: make Python scripts LF too
+*.py text eol=lf
+
+# Ensure Windows files still use CRLF if needed
+*.bat text eol=crlf
