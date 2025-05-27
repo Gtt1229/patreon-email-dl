@@ -6,8 +6,8 @@ An IMAP based Patreon download Docker container
   *  [jlesage/docker-firefox](https://github.com/jlesage/docker-firefox) to easily grab cookie files. (not necassary)
 # How to use:
 
-## 1. Generate an app password for your Gmail account.
-**NOTE:** I personally created a new email, and am forwarding emails from my Patreon account's email to the new account. I recommend this because you can filter the emails prior to processing them. [Read about Gmail forwarding here](https://support.google.com/mail/answer/10957?hl=en)
+## 1. CREATE A NEW GMAIL account and generate an app password for your Gmail account.
+**NOTE:** I personally created a new email, and am forwarding emails from my Patreon account's email to the new account. I **highly recommend** this because you can filter the emails prior to processing them. [Read about Gmail forwarding here](https://support.google.com/mail/answer/10957?hl=en)
 
 ### From https://support.google.com/mail/answer/185833?hl=en:
 ---
