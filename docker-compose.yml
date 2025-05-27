@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   patreon_email_dl:
-    image: gtt1229docker/patreon-email-dl
+    image: gtt1229/patreon-email-dl
     container_name: patreon_email_dl
     environment:
       IMAP_SERVER: imap.gmail.com
