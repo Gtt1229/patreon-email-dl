@@ -14,7 +14,7 @@ services:
       - ./logs:/app/logs
       - ./cookies.txt:/app/cookies.txt
       - ./firefox_config:/app/cookies
-      - ./${OUTPUT_FOLDER}:/downloads
+      - ${OUTPUT_FOLDER}:/downloads
     secrets:
       - patreon_email_dl_secrets
 
