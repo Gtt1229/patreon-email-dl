@@ -21,7 +21,7 @@ services:
     image: jlesage/firefox
     container_name: firefox_patreon_email_dl
     ports:
-      - "8280:5800"  # Access at http://localhost:8280
+      - "5801:5800"  # Access at http://localhost:5801
     volumes:
       - ./firefox_config:/config
     environment:
