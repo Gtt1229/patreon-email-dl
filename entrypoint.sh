@@ -8,11 +8,11 @@ mkdir -p "$(dirname "$LOG_FILE")"
 
 # run at start
 echo "Running job at start..."
-python -u /app/grabEmails.py
+python -u /app/main.py
 
 
 # supercronic
-echo "$CRON_SCHEDULE bash -c 'python -u /app/grabEmails.py'" > /app/crontab.txt
+echo "$CRON_SCHEDULE bash -c 'python -u /app/main.py'" > /app/crontab.txt
 
 echo "Using schedule: $CRON_SCHEDULE"
 echo "Logging to: $LOG_FILE"
