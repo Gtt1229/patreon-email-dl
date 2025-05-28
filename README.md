@@ -52,7 +52,9 @@ Fields:
 
 ## 5. Run `sudo docker-compose up -d firefox_patreon_email_dl` to build and run the Firefox container.
 
-## 6. Visit https://(DOCKER_HOST):5801 (<- default) and sign into Patreon. *There is a nice tab on the left side of the screen for clipboard operations.* the cookies have now been generated, and you can stop this container. You will have to log in again when the cookies expire (about a year). 
+## 6. Visit https://(DOCKER_HOST):5801 (<- default) and sign into Patreon.
+
+*There is a nice tab on the left side of the screen for clipboard operations.* the cookies have now been generated, and you can stop this container. You will have to log in again when the cookies expire (about a year). 
 
 ## 7. You can now run `sudo docker-compose up -d patreon_email_dl` to start the script.
 
