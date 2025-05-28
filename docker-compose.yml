@@ -1,8 +1,8 @@
 version: '3.8'
 services:
-  patreon_email_dl:
+  patreon-email-dl:
     image: gtt1229/patreon-email-dl
-    container_name: patreon_email_dl
+    container_name: patreon-email-dl
     environment:
       IMAP_SERVER: imap.gmail.com
       SUBJECT_KEYWORDS: ${SUBJECT_KEYWORDS}
@@ -18,9 +18,9 @@ services:
     secrets:
       - patreon_email_dl_secrets
 
-  firefox_patreon_email_dl:
+  firefox-patreon-email-dl:
     image: jlesage/firefox
-    container_name: firefox_patreon_email_dl
+    container_name: firefox_patreon-email-dl
     ports:
       - "5801:5800"  # Access at http://localhost:5801
     volumes:
