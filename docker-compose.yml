@@ -20,7 +20,7 @@ services:
 
   firefox-patreon-email-dl:
     image: jlesage/firefox
-    container_name: firefox_patreon-email-dl
+    container_name: firefox-patreon-email-dl
     ports:
       - "5801:5800"  # Access at http://localhost:5801
     volumes:
