@@ -13,7 +13,7 @@ services:
       - ./state:/app/state
       - ./logs:/app/logs
       - ./cookies.txt:/app/cookies.txt
-      - ./firefox_config:/app/cookies
+      - ./firefox-config:/app/cookies
       - ${OUTPUT_FOLDER}:/downloads
     secrets:
       - patreon_email_dl_secrets
@@ -24,7 +24,7 @@ services:
     ports:
       - "5801:5800"  # Access at http://localhost:5801
     volumes:
-      - ./firefox_config:/config
+      - ./firefox-config:/config
     environment:
       - TZ=America/New_York
     #restart: unless-stopped
