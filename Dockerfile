@@ -16,7 +16,7 @@ RUN wget -q -O /usr/local/bin/supercronic https://github.com/aptible/supercronic
 WORKDIR /app
 
 # Only copy needed files (no COPY . /app!)
-COPY ./grabEmails.py /app/grabEmails.py
+COPY ./*.py /app/
 COPY ./entrypoint.sh /entrypoint.sh
 
 # Make entrypoint executable

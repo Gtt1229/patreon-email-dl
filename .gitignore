@@ -20,3 +20,6 @@ firefox_config/
 cookies.txt
 state/
 dev/
+
+# build-dev.ps1 build-prod.ps1 scripts
+*.ps1
