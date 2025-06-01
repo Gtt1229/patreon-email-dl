@@ -146,3 +146,24 @@ def extract_firefox_cookies(sqlite_path="/app/cookies/profile/cookies.sqlite", o
     cj.save(ignore_discard=True)
     logging.info(f"Extracted {len(rows)} cookies to: {output_path}")
     return True
+
+def clean_title_from_filename(filename):
+    """Clean filename to create a proper title by replacing special characters with spaces"""
+    if not filename:
+        return ""
+    
+    # Remove file extension
+    name_without_extension = os.path.splitext(os.path.basename(filename))[0]
+    
+    # Replace non-standard characters with spaces
+    cleaned_title = re.sub(r'[/_*&%^$#@!+\-=\[\]{}|\\:;"",.<>?]', ' ', name_without_extension)
+    
+    # Replace multiple consecutive spaces with single space
+    cleaned_title = re.sub(r'\s+', ' ', cleaned_title)
+    
+    # Trim leading/trailing spaces
+    cleaned_title = cleaned_title.strip()
+    
+    log(f"Cleaned filename '{filename}' to title '{cleaned_title}'")
+    
+    return cleaned_title
