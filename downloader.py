@@ -1,12 +1,12 @@
-
 import imaplib
 import email
 import re
 import logging
 import os
 import subprocess
+import shutil
 
-from utils import extract_firefox_cookies, stream_process_output, extract_valid_links, save_downloaded_batch
+from utils import extract_firefox_cookies, stream_process_output, extract_valid_links, save_downloaded_batch, clean_title_from_filename
 from media_utils import get_ffmpeg_metadata_title
 from mail_utils import label_as_done
 
@@ -19,15 +19,17 @@ def process_email_body(body, mail, email_id, config, downloaded, sender_name=Non
     links = list(set(links))
     
     # Set up output folder and subfolder
-    output_folder = config["output_folder"]
+    final_output_folder = config["output_folder"]
     if sender_name and config["auto_make_folders"]:
         # Clean up sender name for subfolder
         safe_name = re.sub(r'[\\/*?:"<>|]', "_", sender_name)
-        output_folder = os.path.join(output_folder, safe_name)
+        final_output_folder = os.path.join(final_output_folder, safe_name)
         log(f"Using subfolder for sender: {safe_name}")
-        
-    os.makedirs(output_folder, exist_ok=True)
-    output_template = os.path.join(output_folder, "%(title)s.%(ext)s")
+    
+    # Use temp folder for processing
+    temp_folder = "/tmp/patreon_downloads"
+    os.makedirs(temp_folder, exist_ok=True)
+    output_template = os.path.join(temp_folder, "%(title)s.%(ext)s")
     
     successful = False
     newly_downloaded = []
@@ -75,9 +77,9 @@ def process_email_body(body, mail, email_id, config, downloaded, sender_name=Non
             log(f"Skipping ffmpeg tagging, already processed: {link}")
             continue
 
-        # Get intended title from filename
+        # Clean title from filename
         basename = os.path.basename(filename)
-        title = os.path.splitext(basename)[0]      
+        title = clean_title_from_filename(basename) 
 
         # Check if metadata title already matches
         existing_title = get_ffmpeg_metadata_title(filename)
@@ -115,6 +117,20 @@ def process_email_body(body, mail, email_id, config, downloaded, sender_name=Non
         # Update memory to prevent same session dupes
         downloaded.add(link)
         successful = True
+    
+    # Move files to output folder
+    if newly_downloaded:
+        os.makedirs(final_output_folder, exist_ok=True)
+        for i, (link, temp_filename) in enumerate(newly_downloaded):
+            basename = os.path.basename(temp_filename)
+            final_filename = os.path.join(final_output_folder, basename)
+            
+            try:
+                shutil.move(temp_filename, final_filename)
+                log(f"Moved to final location: {final_filename}")
+                newly_downloaded[i] = (link, final_filename)
+            except Exception as e:
+                log(f"Failed to move file: {e}")
     
     # Save all at the end
     if newly_downloaded:
