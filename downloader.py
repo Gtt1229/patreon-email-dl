@@ -58,7 +58,7 @@ def process_email_body(body, mail, email_id, config, downloaded, sender_name=Non
             "--restrict-filenames",
             "--referer", "https://www.patreon.com/",
             "--user-agent", "Mozilla/5.0 (Windows NT 10.0; rv:139.0) Gecko/20100101 Firefox/139.0",
-            "--extractor-args generic:impersonate",
+            "--extractor-args", "generic:impersonate",
             "--print", "after_move:filepath",
             "-o", output_template,
             link
